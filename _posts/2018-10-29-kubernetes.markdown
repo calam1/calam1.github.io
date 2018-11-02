@@ -1,5 +1,5 @@
 ---
-title:  "Setting up Kubernetes and Istio "
+title:  "Setting up Kubernetes and Istio on Minikube"
 date:   2018-10-29 10:18:00
 description: Setting up Kubernetes, Minikube and Istio on a Mac
 ---
@@ -58,8 +58,10 @@ You will get a message to export the path,just copy the command and run it
 {% endhighlight %}
 
 **Start up Minikube**
+
+Since we are using VirtualBox we don't have to set the driver; I believe VirtualBox is the default
 {% highlight ruby %}
-// since we are using VirtualBox we don't have to set the driver; I believe VirtualBox is the default
+
 > minikube start --memory=8192 --cpus=4 --kubernetes-version=v1.10.0 
 {% endhighlight %}
 
@@ -71,13 +73,93 @@ So when you downloaded Istio via the cURL command in the previous steps it downl
 {% endhighlight %}
 
 *Install Istio's [Custom Resource Definitions][custom-resource-definitions-url]*
+
+CRDs are one way to define resources, [Aggregated APIs][aggregated-api-url] is the other way
 {% highlight ruby %}
 > kubectl apply -f install/kubernetes/helm/istion/templates/crds.yaml
 {% endhighlight %}
 
-**T0 BE CONTINUED**
+*Install Istio's Core Components*
 
-Check out the [Jekyll docs][jekyll] for more info on how to get the most out of Jekyll. File all bugs/feature requests at [Jekyll's GitHub repo][jekyll-gh].
+I chose to install without mutual TLS authentication between sidecars. There are other options, such as installing with TLS authentication, using Helm, using Helm and Tiller, etc.
+{% highlight ruby %}
+> kubectl apply -f install/kubernetes/istio-demo.yaml
+{% endhighlight %}
+
+*Verify the installation*
+
+{% highlight ruby %}
+> kubectl get svc -n istio-system
+{% endhighlight %}
+You should see services like istio-ingressgateway, istio-telemetry, istio-sidecar-injector, etc
+
+Since we are using minikube, it does not support an external load balancer. The EXTERNAL-IP of istio-ingress and istio-ingressgateway will say <pending>. You will need to access it using the service NodePort, or use port-forwarding instead.
+
+*Install the sample project [BookInfo][bookInfo-url]*
+
+{% highlight ruby %}
+> kubectl apply -f <(istioctl kube-inject -f samples/bookinfo/platform/kube/bookinfo.yaml)
+{% endhighlight %}
+
+*Confirm that the services are running*
+
+{% highlight ruby %}
+> kubectl get services
+NAME                              TYPE           CLUSTER-IP       EXTERNAL-IP              PORT(S)          AGE
+details                           ClusterIP      10.108.0.216     <none>                   9080/TCP         4d
+kubernetes                        ClusterIP      10.96.0.1        <none>                   443/TCP          4d
+productpage                       ClusterIP      10.96.126.187    <none>                   9080/TCP         4d
+ratings                           ClusterIP      10.106.50.27     <none>                   9080/TCP         4d
+reviews                           ClusterIP      10.109.237.86    <none>                   9080/TCP         4d
+{% endhighlight %}
+
+*Confirm pods are running*
+
+{% highlight ruby %}
+> kubectl get pods
+NAME                                               READY   STATUS    RESTARTS   AGE
+details-v1-6865b9b99d-vzz82                        2/2     Running   1          4d
+productpage-v1-f8c8fb8-6bldf                       2/2     Running   1          4d
+ratings-v1-77f657f55d-66m2t                        2/2     Running   1          4d
+reviews-v1-6b7f6db5c5-8gmsg                        2/2     Running   1          4d
+reviews-v2-7ff5966b99-hfxcd                        2/2     Running   1          4d
+reviews-v3-5df889bcff-2pqdd                        2/2     Running   1          4d
+{% endhighlight %}
+
+*Now we need to make the app accessible*
+
+{% highlight ruby %}
+> kubectl apply -f samples/bookinfo/networking/bookinfo-gateway.yaml
+{% endhighlight %}
+
+*Confirm the gateway*
+
+{% highlight ruby %}
+> kubectl get gateway
+NAME               AGE
+bookinfo-gateway   64s
+{% endhighlight %}
+
+*Determine the IP address*
+
+Since you are running minikube there is no external load balancer, you can find the IP address of minikube by running the following command
+{% highlight ruby%}
+> minikube ip
+192.168.99.100
+{% endhighlight %}
+
+*Determine the port*
+
+This command will return the port number
+{% highlight ruby %}
+> kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].nodePort}'
+{% endhighlight %}
+
+Now armed with the IP address and port you can hit the browser with the following url:
+
+http://ip-address:port/productpage
+i.e. http://192.168.99.100:31380/productpage
+
 
 [brew-link]: https://brew.sh/
 [minikube-github]: https://github.com/kubernetes/minikube
@@ -88,3 +170,5 @@ Check out the [Jekyll docs][jekyll] for more info on how to get the most out of 
 [article-2-url]: https://gist.github.com/inadarei/7c4f4340d65b0cc90d42d6382fb63130
 [custom-resource-definitions-url]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions
 [istio-quickstart-url]: https://istio.io/docs/setup/kubernetes/quick-start/
+[aggregate-api-url]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#api-server-aggregation
+[bookInfo-url]: https://istio.io/docs/examples/bookinfo/
