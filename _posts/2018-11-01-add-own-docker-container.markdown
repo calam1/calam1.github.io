@@ -1,7 +1,7 @@
 ---
 title:  "Adding your own Docker Container to the Istio Sample"
-date:   2018-11-01 10:18:00
-description: Adding your own Docker Container to the sample (BookInfo) onto Kubernetes, Minikube and Istio
+date:   2018-11-01 20:18:00
+description: Running your own Docker Container with the sample (BookInfo) onto Kubernetes, Istio, and Minikube
 ---
 
 So now that you set up and ran the [BookInfo][bookInfo-url] example from the previous post; you may want to deploy a Docker container of your own onto the Kubernetes setup.  Doing this will give you a little more insight on how Kubernetes and Istio work.
