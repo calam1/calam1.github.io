@@ -161,6 +161,59 @@ http://ip-address:port/productpage
 i.e. http://192.168.99.100:31380/productpage
 
 
+**Telemetry**
+
+*Istio and Prometheus and Grafana*
+
+Check to see if Prometheus is running
+{% highlight ruby %}
+> kubectl -n istio-system get svc prometheus
+NAME         CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+prometheus   10.59.241.54   <none>        9090/TCP   2m
+{% endhighlight %}
+
+Check to see if Grafana is running
+{% highlight ruby %}
+> kubectl -n istio-system get svc grafana
+NAME      CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+grafana   10.59.247.103   <none>        3000/TCP   2m
+{% endhighlight %}
+
+{% highlight ruby %}
+> kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=grafana -o jsonpath='{.items[0].metadata.name}') 3000:3000 &
+{% endhighlight %}
+
+Various built-in Grafana Dashboards
+ * http://ip-address:3000/dashboard/db/istio-mesh-dashboard 
+ * http://ip-address:3000/dashboard/db/istio-service-dashboard 
+ * http://ip-address:3000/dashboard/db/istio-workload-dashboard
+
+&nbsp;
+&nbsp;
+
+*Istio and Jaeger*
+
+{% highlight ruby %}
+> kubectl port-forward -n istio-system $(kubectl get pod -n istio-system -l app=jaeger -o jsonpath='{.items[0].metadata.name}') 16686:16686 &
+{% endhighlight %}
+
+http://ip-address:16686
+
+*Istio and Service Graph*
+
+Check to see if the Service Graph is running
+{% highlight ruby %}
+> kubectl -n istio-system get svc servicegraph
+NAME           CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+servicegraph   10.59.253.165   <none>        8088/TCP   30s
+{% endhighlight %}
+
+{% highlight ruby %}
+> kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=servicegraph -o jsonpath='{.items[0].metadata.name}') 8088:8088 &
+{% endhighlight %}
+
+http://ip-address:8088/force/forcegraph.html
+
 [brew-link]: https://brew.sh/
 [minikube-github]: https://github.com/kubernetes/minikube
 [jekyll-gh]: https://github.com/mojombo/jekyll
