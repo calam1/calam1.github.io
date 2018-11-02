@@ -1,21 +1,25 @@
 name: Your New Jekyll Site
 description: Technological Machinations
-meta_description: "Chris Blog"
+meta_description: "Chris' Blog"
 
 aboutPage: true
 
 markdown: kramdown
 highlighter: rouge
 
-plugins: [jekyll-paginate]
+plugins: 
+  - jekyll-paginate
+  - jekyll-seo-tag
+  - jekyll-feed
+  - jekyll-sitemap
 paginate: 20
 domain_name: 'http://calam1.github.io'
-google_analytics: 'UA-XXXXXXXX-X'
+google_analytics: 'UA-128582509-1'
 disqus: false
 disqus_shortname: 'calam1'
 
 # Details for the RSS feed generator
-url:            'http://calam1.github.io'
+url:            'https://calam1.github.io'
 author:         'Chris Lam'
 authorTwitter:  '@chrislam67'
 
