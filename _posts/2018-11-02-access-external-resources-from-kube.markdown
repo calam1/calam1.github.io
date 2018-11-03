@@ -3,6 +3,8 @@ title:  "Accessing an External Resource from Kubernetes"
 date:   2018-11-01 22:11:00
 description: How to access an external resource like a database from Kubernetes
 ---
+Sometimes not all of your services are running on a Kubernetes cluster.  Maybe your database is sitting on a server external to your cluster, since you do not want it to be ephemeral. In that case how does a service within Kubernetes connect to it?  You just need to create a couple of yaml files and apply them.  Now this may not be the optimal or most restrictive approach, since I do not define selectors; but it should be enough to get you started and getting your app to communicate to your external database.
+
 
 Create a yaml file and add the following(replace the appropriate info, like the DNS, port, etc)
 {% highlight ruby %}
