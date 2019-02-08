@@ -1,5 +1,5 @@
 ---
-title: "gRPC and MySql Part 3"
+title: "gRPC and MySql Part 2"
 date: 2019-02-08 15:15:00
 description: "A simple golang gRPC example interacting with a database"
 ---
