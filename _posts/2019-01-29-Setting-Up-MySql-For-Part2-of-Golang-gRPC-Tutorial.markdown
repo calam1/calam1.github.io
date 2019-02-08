@@ -3,6 +3,8 @@ title: "Setting up MySql for Part 2 of the gRPC using Go"
 date: 2019-01-29 13:41:00
 description: "Setting up mySql on Docker for use in Part 2 of the gRPC and Go Tutorial"
 ---
+If you don't want to setup or run mySql on your laptop you can run it in docker; as to not pollute your system.  It is up to you, if you prefer to just install mySql locally you can skip this tutorial.
+
 This entry will go over setting up a docker instance of mySql.  We will need this database for Part 2 of our tutorial.  I am not going to go over the details of Docker or mySql; so I am assuming some comfort level with these technologies.  But this is pretty simple, so as long as you know how to install [Docker][docker-desktop-url], the rest should be relatively simple.
 
 * Docker 18.09.1-ce
@@ -80,7 +82,7 @@ Firsty create the database.  So if you are not in mySql in the docker container 
 > use customers;
 {% endhighlight %}
 
-Now we will create a trivial "user" table
+Now we will create a trivial "user" table.  Run the following sql in the customers database
 {% highlight sql %}
 CREATE TABLE `User` (   `ID` bigint(20) NOT NULL AUTO_INCREMENT,   `FirstName` varchar(200) DEFAULT NULL,  `LastName` varchar(200) DEFAULT NULL, `Address` varchar(1024) DEFAULT NULL, PRIMARY KEY (`ID`),   UNIQUE KEY `ID_UNIQUE` (`ID`) );
 {% endhighlight %}
