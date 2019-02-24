@@ -1,8 +1,10 @@
 ---
-title:  "gRPC from Hello World to Kubernetes - Part 1"
+title:  "gRPC from Hello World to Docker - Part 1"
 date:   2019-01-27 19:04:00
 description: Tutorial on using gRPC using Go to deploying it on Kubernetes"
 ---
+__NOTE: Originally this blog entry was going to take us from HelloWorld gRPC to a Kubernetes deployment.  I decided to not do the Kubernetes deployment since in many ways mimics my first tutorial.  I will replace it with a tutorial dockerizing the gRPC server__
+
 I had the privilege to attend Code One(previously named Java One) a few months ago.  And I saw a presentation about gRPC.  To be honest I have never heard of it before.  But it sounded interesting and I wanted to spend some time learning it.  I finally carved out some time to play with gRPC and put my findings on my blog.  This will be a multipart post.  I am not sure how many parts, but I am thinking 3 parts or so.  I will start with a Hello World example, and will attempt to explain some details about gRPC usage in Go.  The next step will be a simple application interacting with a database.  And the last piece will be deploying to Kubernetes.  As stated the first post will be a simple Hello World example. The [source code][helloworld-github-code-url] for this first part is in GitHub.
 
 I will not go into any particulars of Golang, so there will be some assumption that you understand Go enough to do this tutorial.  If not, there are plenty of good resources out there.  I will provide some precursory information about what versions of software I am using, etc.
@@ -255,6 +257,9 @@ func main() {
 }                                     
 {% endhighlight %}
 
+This little set of grpc tutorials in go were inspired and influenced by this [Medium article][medium-article-url]
+
 [gopath-url]: https://github.com/golang/go/wiki/GOPATH
 [protocol-buffer-binary-url]: https://github.com/protocolbuffers/protobuf/releases
 [helloworld-github-code-url]: https://github.com/calam1/grpc-tutorial
+[medium-article-url]: https://medium.com/@amsokol.com/tutorial-how-to-develop-go-grpc-microservice-with-http-rest-endpoint-middleware-kubernetes-daebb36a97e9
