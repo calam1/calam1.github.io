@@ -30,7 +30,7 @@ First you need to create a [Docker Hub Account][docker-hub-url]; once that is co
 &nbsp;
 You will need the password for the next step
 {% highlight ruby %}
-> docker logs mysql1 2>&1 | grep GENERATED
+> docker logs mysql 2>&1 | grep GENERATED
 {% endhighlight %}
 
 **Go into container and run mysql**
