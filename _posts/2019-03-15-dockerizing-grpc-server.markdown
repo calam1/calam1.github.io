@@ -127,6 +127,7 @@ service UserService {
 Well this concludes my tutorial.  Hope you got a little insight and value from it.  Stay tuned for my next tutorial, it may involve this codebase.  I am thinking about securing the endpoints, instead of having the insecure.  It is something I need to learn to do and this is a nice segue to it.
 
 Thanks for reading!
+
 [min-golang-dockerfile]: https://pierreprinetti.com/blog/2018-the-go-1.11-web-service-dockerfile/
 [grpc-curl-github]: https://github.com/fullstorydev/grpcurl
 [grpc-tutorial-part3]: https://github.com/calam1/grpc-tutorial/tree/master/user-server/server
