@@ -74,7 +74,7 @@ You should now see a file named user.pb.go in the *proto* directory now.  If you
 
 **UserServiceServer Implementation**
 
-I created another directory under *user* named *user_developer* and created a file named *main.go*
+I created another directory under *user* named *user_server* and created a file named *main.go*
 
 {% highlight go %}
 package main                                                                                                                                                                                                                                 
