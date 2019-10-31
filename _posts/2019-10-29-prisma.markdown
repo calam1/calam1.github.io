@@ -1,0 +1,845 @@
+---
+title: "Prisma Tutorial in Go"
+date: 2019-03-15 15:14:00
+description: "This a slightly update version of the tutorial that Prisma offers, with corrections"
+---
+
+Recently I started to look at Prisma as an ORM for our graphql server.  I looked at their tutorial for [golang][prisma-go-tutorial] and I found going through it there were some errors.  Some of the errors were simple code issues in the code, that were easily resolvable.  But some of the errors, specifically in the resolver class just did not work; due to some of the resolver implementations being slightly incorrect.  I am not a go expert but was able to fix it and finish the tutorial.  Sad part was it took a lot longer than anticipated. 
+
+Also, instead of using "deps" to manage my dependencies, I wanted to use mod.  So a lot of this will be a duplicate of the [Prisma Golang Tutorial][prisma-go-tutorial], but with what I believe are corrections and the usage of mod vs dep.
+
+Thanks for reading!
+
+**Setting up Prisma and PostgreSQL on Docker**
+
+First you need to install Prisma
+
+{% highlight python %}
+# on a mac 
+brew tap prisma/prisma
+brew install prisma
+{% endhighlight %}
+
+
+Now you need to install [Docker][docker-url]
+
+
+Create a new directory to house this tutorial.  You can call it hello-world-prisma if you like.  Once you create it, cd into it.
+
+
+{% highlight python %}
+touch docker-compose.yml
+{% endhighlight %}
+
+Add the following in the docker-compose.yml, in this example I am going to use PostgreSQL
+
+{% highlight python %}
+version: '3'
+services:
+  prisma:
+    image: prismagraphql/prisma:1.34
+    restart: always
+    ports:
+      - '4466:4466'
+    environment:
+      PRISMA_CONFIG: |
+        port: 4466
+        databases:
+          default:
+            connector: postgres
+            host: postgres
+            port: 5432
+            user: prisma
+            password: prisma
+  postgres:
+    image: postgres:10.3
+    restart: always
+    environment:
+      POSTGRES_USER: prisma
+      POSTGRES_PASSWORD: prisma
+    volumes:
+      - postgres:/var/lib/postgresql/data
+volumes:
+  postgres: ~
+{% endhighlight %}
+
+
+Save the file and close it. Now we are going to stand up our prisma server and database.
+{% highlight python %}
+docker-compose up -d
+{% endhighlight %}
+
+Bootstrap the configuration files for your prisma client. The endpoint needs to match the URL of a running Prisma server.
+{% highlight python %}
+prisma init --endpoint http://localhost:4466
+{% endhighlight %}
+
+You should see the following:
+
+{% highlight python %}
+Created 2 new files:
+
+  prisma.yml           Prisma service definition
+  datamodel.prisma    GraphQL SDL-based datamodel (foundation for database)
+
+Next steps:
+
+  1. Deploy your Prisma service: prisma deploy
+{% endhighlight %}
+
+Now we need to deploy our prisma server
+
+{% highlight python %}
+prisma deploy
+{% endhighlight %}
+
+You should see the following, notice it created a default User table with a couple of columns.
+
+{% highlight python %}
+Creating stage default for service default ✔
+Deploying service `default` to stage `default` to server `local` 1.0s
+
+Changes:
+
+  User (Type)
+  + Created type `User`
+  + Created field `id` of type `ID!`
+  + Created field `name` of type `String!`
+
+Applying changes 1.2s
+
+Your Prisma endpoint is live:
+
+  HTTP:  http://localhost:4466
+  WS:    ws://localhost:4466
+
+You can view & edit your data here:
+
+  Prisma Admin: http://localhost:4466/_admin
+{% endhighlight %}
+
+Congratulations, you have successfully set up Prisma. You can now start using the Prisma client to talk to your database from code.
+
+
+If you want to view and edit the data in your database, you can use Prisma Admin. To access Prisma Admin, you need to append /_admin to your Prisma endpoint, for example: http://localhost:4466/_admin.
+
+
+**Generate your Prisma Client**
+
+edit the prisma.yml file add the following to the end of the file:
+{% highlight python %}
+generate:
+ - generator: go-client
+   output: ./generated/prisma-client/
+{% endhighlight %}
+
+Now generate the client
+
+{% highlight python %}
+prisma generate
+{% endhighlight %}
+
+You should see the following:
+
+{% highlight python %}
+Generating schema 13ms
+Saving Prisma Client (Go) at /Users/chris/git/development/go_modules/graphql/hello-world-prisma/generated/prisma-client/
+
+{% endhighlight %}
+
+The CLI now stored your Prisma client inside the ./generated/prisma-client/ directory as specified in prisma.yml.
+
+
+**Prepare the Go client**
+*I am using go v1.13*
+
+First since we are using mod, let set that up first.  Make sure you are in your hello-world-prisma directory.  Type the following:
+
+{% highlight python %}
+go mod init github.com/prismaTutorial
+{% endhighlight %}
+
+You should see the following:
+
+{% highlight python %}
+go: creating new go.mod: module github.com/prismaTutorial
+{% endhighlight %}
+
+create a file called index.go, open up your favorite editor and add the following:
+
+Note:  I had to change the import statememt for the prisma import.  The original import looked like this:
+
+{% highlight python %}
+prisma "hello-world/generated/prisma-client"
+{% endhighlight %}
+
+As you can see below my import is slightly different.  This is due to the mod init command I used, but I think if you used the dep init command you would have run into a similar issue and would not be able to use the code provided verbatim.
+
+{% highlight python %}
+package main
+
+import (
+    "context"
+    "fmt"
+    prisma "github.com/prismaTutorial/generated/prisma-client"
+)
+
+func main() {
+    client := prisma.New(nil)
+    ctx := context.TODO()
+
+    // Create a new user
+    name := "Alice"
+    newUser, err := client.CreateUser(prisma.UserCreateInput{
+        Name: name,
+    }).Exec(ctx)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Printf("Created new user: %+v\n", newUser)
+
+    users, err := client.Users(nil).Exec(ctx)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Printf("%+v\n", users)
+}
+{% endhighlight %}
+
+We need to import dependencies.  So type the following command:
+{% highlight python %}
+go mod tidy
+{% endhighlight %}
+
+Let's run the code
+
+{% highlight python %}
+go run index.go
+{% endhighlight %}
+
+You should see the following:
+{% highlight python %}
+Created new user: &{ID:ck2co6u6p000m0718s8l7vbv9 Name:Alice}
+[{ID:ck2co6u6p000m0718s8l7vbv9 Name:Alice}]
+{% endhighlight %}
+
+Also if you go to http://localhost:4466/_admin you will see the new user in the table.
+
+
+**Change Datamodel**
+
+Update the datamodel, edit the datamodel.prisma file and update it with the following (overwrite what was in there).  You will notice we added some more columns to User and add a new type to the model, Post.
+
+{% highlight python %}
+type User {
+  id: ID! @id
+  email: String @unique
+  name: String!
+  posts: [Post!]!
+}
+
+type Post {
+  id: ID! @id
+  title: String!
+  published: Boolean! @default(value: false)
+  author: User @relation(link: INLINE)
+}
+{% endhighlight %}
+
+Now add the following to your prisma.yml file.  This will ensure when you deploy your new/updated prisma model your "generated/prisma-client" will be updated, otherwise if you do not add this you will manually have to generate the client again by typing "prisma generate"
+
+{% highlight python %}
+hooks:
+  post-deploy:
+    - prisma generate
+{% endhighlight %}
+
+
+run the following command:
+
+{% highlight python %}
+prisma deploy
+{% endhighlight %}
+
+You should see the following.  Wait what is that error?  Apparently you don't need the post-hook anymore, so just ignore everything I said earlier related to the post-hook and what happens if you don't add it.  The tutorial is not up to date.  But a caveat here, if you do not add the post hook.  When I first did this tutorial, I did not see this notice/erro, so it is best you check your tables and generated client to see if the new items are added.  Otherwise you will need to run "prisma generate".
+
+{% highlight python %}
+Deploying service `default` to stage `default` to server `local` 757ms
+
+Changes:
+
+  Post (Type)
+  + Created type `Post`
+  + Created field `id` of type `ID!`
+  + Created field `title` of type `String!`
+  + Created field `published` of type `Boolean!`
+  + Created field `author` of type `User`
+
+  User (Type)
+  + Created field `email` of type `String`
+  + Created field `posts` of type `[Post!]!`
+
+  PostToUser (Relation)
+  + Created an inline relation between `Post` and `User` in the column `author` of table `Post`
+
+Applying changes 1.1s
+
+post-deploy:
+internal/modules/cjs/loader.js:594
+    throw err;
+    ^
+
+Error: Cannot find module '/Users/chris/git/development/go_modules/graphql/hello-world-prisma/gener
+    at Function.Module._resolveFilename (internal/modules/cjs/loader.js:592:15)
+    at Function.Module._resolveFilename (pkg/prelude/bootstrap.js:1285:46)
+    at Function.Module._load (internal/modules/cjs/loader.js:518:25)
+    at Function.Module.runMain (pkg/prelude/bootstrap.js:1314:12)
+    at startup (internal/bootstrap/node.js:274:19)
+    at bootstrapNodeJSCore (internal/bootstrap/node.js:608:3)
+
+Running prisma generate ✖
+Warning: The `prisma generate` command was executed twice. Since Prisma 1.31, the Prisma client is
+st-deploy` hook any more, you can therefore remove the hook if you do not need it otherwise.
+Generating schema 20ms
+Saving Prisma Client (Go) at /Users/chris/git/development/go_modules/graphql/hello-world-prisma/gen
+
+Your Prisma endpoint is live:
+
+  HTTP:  http://localhost:4466
+  WS:    ws://localhost:4466
+
+You can view & edit your data here:
+
+  Prisma Admin: http://localhost:4466/_admin
+{% endhighlight %}
+
+
+**Reading and Writing Nested Objects**
+
+Now I saved off the original index.go in github to index.go_1 for reference sake.  I created a new index.go file and added the following code:
+
+{% highlight python %}
+package main
+
+import (
+    "context"
+    "fmt"
+
+    prisma "github.com/prismaTutorial/generated/prisma-client"
+)
+
+func main() {
+    client := prisma.New(nil)
+    ctx := context.TODO()
+
+    // Create a new user with two posts
+    name := "Bob"
+    email := "bob@prisma.io"
+    title1 := "Join us for GraphQL Conf in 2019"
+    title2 := "Subscribe to GraphQL Weekly for GraphQL news"
+    newUser, err := client.CreateUser(prisma.UserCreateInput{
+        Name:  name,
+        Email: &email,
+        Posts: &prisma.PostCreateManyWithoutAuthorInput{
+            Create: []prisma.PostCreateWithoutAuthorInput{
+                prisma.PostCreateWithoutAuthorInput{
+                    Title: title1,
+                },
+                prisma.PostCreateWithoutAuthorInput{
+                    Title: title2,
+                },
+            },
+        },
+    }).Exec(ctx)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Printf("Created new user: %+v\n", newUser)
+
+    allUsers, err := client.Users(nil).Exec(ctx)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Printf("%+v\n", allUsers)
+
+    allPosts, err := client.Posts(nil).Exec(ctx)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Printf("%+v\n", allPosts)
+}
+{% endhighlight %}
+
+I run the new index.go
+
+{% highlight python %}
+go run index.go
+{% endhighlight %}
+
+You should see the following, or something similar:
+
+{% highlight python %}
+Created new user: &{ID:ck2e14hkl001k0a18e84ni0rz Email:0xc0000c1300 Name:Bob}
+[{ID:ck2co6u6p000m0718s8l7vbv9 Email:<nil> Name:Bob} {ID:ck2e14hkl001k0a18e84ni0rz Email:0xc00018a2c0 Name:Bob}]
+[{ID:ck2e14hkx001l0a18ms8dtyyr Title:Join us for GraphQL Conf in 2019 Published:false} {ID:ck2e14hl1001m0a18ggqjx372 Title:Subscribe to GraphQL Weekly for GraphQL news Published:false}]
+{% endhighlight %}
+
+
+Now let's query that data, if you copied the code from the prisma tutorial, it won't work.  The email is not correct, we did not insert a post for  "Alice" we inserted a post for "bob".  So just add the following 
+
+
+{% highlight python %}
+// Query data - use the client and context defined from the above code, In my file I just commented out the post creation but reused the client and context in the index.go file.
+  email := "bob@prisma.io"
+  postsByUser, err := client.User(prisma.UserWhereUniqueInput{
+    Email: &email,
+  }).Posts(nil).Exec(ctx)
+
+  if err != nil {
+    panic(err)
+  }
+  fmt.Printf("%+v\n", postsByUser)
+{% endhighlight %}
+
+Run the code, you should see similar output:
+
+{% highlight python %}
+[{ID:ck2e14hkx001l0a18ms8dtyyr Title:Join us for GraphQL Conf in 2019 Published:false} {ID:ck2e14hl1001m0a18ggqjx372 Title:Subscribe to GraphQL Weekly for GraphQL news Published:false}]
+{% endhighlight %}
+
+
+**Build an App**
+
+We are going to use [gqlgen][gqlgen_url] as our graphql server.  
+
+In your project directory create a "scripts" directory and in that directory create a file named "gqlgen.go", place the following code in the golang file:
+
+If you are curious about the build ignore comment here is a link to the [documentation][build_url]
+{% highlight python %}
+// +build ignore
+
+package main
+
+import "github.com/99designs/gqlgen/cmd"
+
+func main() {
+    cmd.Execute()
+}
+{% endhighlight %}
+
+now make sure you have the dependencies required by running, check go.mod and go.sum and see if https://github.com/99designs/gqlgen is imported, I sometimes don't see it when I run tidy, or need to run it multiple times, which it keeps adding and removing it, especially when you run it with the "-v" flag; weird
+
+{% highlight python %}
+go mod tidy
+{% endhighlight %}
+
+Create a directory named "server" and in that directory create a file named "schema.graphql" add the following type definitions to it:
+
+{% highlight python %}
+type Query {
+  publishedPosts: [Post!]!
+  post(postId: ID!): Post
+  postsByUser(userId: ID!): [Post!]!
+}
+
+type Mutation {
+  createUser(name: String!): User
+  createDraft(title: String!, userId: ID!): Post
+  publish(postId: ID!): Post
+}
+
+type User {
+  id: ID!
+  email: String
+  name: String!
+  posts: [Post!]!
+}
+
+type Post {
+  id: ID!
+  title: String!
+  published: Boolean!
+  author: User
+}
+{% endhighlight %}
+
+
+Configure gqlgen
+
+In "servers" parent directory create a file named "gqlgen.yml" add the following:
+
+{% highlight python %}
+schema: server/schema.graphql
+exec:
+  filename: server/generated.go
+models:
+  Post:
+    model: github.com/prismaTutorial/generated/prisma-client.Post
+  User:
+    model: githbu.com/prismaTutorial/generated/prisma-client.User
+resolver:
+  # Goal: copy&paste from generated file
+  filename: tmp/resolver.go
+  type: Resolver
+{% endhighlight %}
+
+
+Use the gqlgen code generation script to create the foundation for your GraphQL server:
+
+{% highlight python %}
+go run scripts/gqlgen.go
+{% endhighlight %}
+
+Running the above command generates a file, you want to copy that file from tmp to server
+
+{% highlight python %}
+cp ./tmp/resolver.go ./server/
+{% endhighlight %}
+
+Now you need to implement the resolver.go functions.  The original file looks like this:
+
+{% highlight python %}
+package tmp
+
+import (
+  "context"
+
+  prisma "github.com/prismaTutorial/generated/prisma-client"
+  "github.com/prismaTutorial/server"
+)
+
+// THIS CODE IS A STARTING POINT ONLY. IT WILL NOT BE UPDATED WITH SCHEMA CHANGES.
+
+type Resolver struct{}
+
+func (r *Resolver) Mutation() server.MutationResolver {
+  return &mutationResolver{r}
+}
+func (r *Resolver) Post() server.PostResolver {
+  return &postResolver{r}
+}
+func (r *Resolver) Query() server.QueryResolver {
+  return &queryResolver{r}
+}
+func (r *Resolver) User() server.UserResolver {
+  return &userResolver{r}
+}
+
+type mutationResolver struct{ *Resolver }
+
+func (r *mutationResolver) CreateUser(ctx context.Context, name string) (*prisma.User, error) {
+  panic("not implemented")
+}
+func (r *mutationResolver) CreateDraft(ctx context.Context, title string, userID string) (*prisma.Post, error) {
+  panic("not implemented")
+}
+func (r *mutationResolver) Publish(ctx context.Context, postID string) (*prisma.Post, error) {
+  panic("not implemented")
+}
+
+type postResolver struct{ *Resolver }
+
+func (r *postResolver) Author(ctx context.Context, obj *prisma.Post) (*prisma.User, error) {
+  panic("not implemented")
+}
+
+type queryResolver struct{ *Resolver }
+
+func (r *queryResolver) PublishedPosts(ctx context.Context) ([]*prisma.Post, error) {
+  panic("not implemented")
+}
+func (r *queryResolver) Post(ctx context.Context, postID string) (*prisma.Post, error) {
+  panic("not implemented")
+}
+func (r *queryResolver) PostsByUser(ctx context.Context, userID string) ([]*prisma.Post, error) {
+  panic("not implemented")
+}
+
+type userResolver struct{ *Resolver }
+
+func (r *userResolver) Posts(ctx context.Context, obj *prisma.User) ([]*prisma.Post, error) {
+  panic("not implemented")
+}
+{% endhighlight %}
+
+Replace the above with this:
+
+{% highlight python %}
+package main
+
+import (
+  "context"
+
+    prisma "github.com/prismaTutorial/generated/prisma-client"
+    
+    )
+
+type Resolver struct {
+  Prisma *prisma.Client
+  
+}
+
+func (r *Resolver) Mutation() MutationResolver {
+  return &mutationResolver{r}
+
+  
+}
+func (r *Resolver) Post() PostResolver {
+  return &postResolver{r}
+
+  
+}
+func (r *Resolver) Query() QueryResolver {
+  return &queryResolver{r}
+
+  
+}
+func (r *Resolver) User() UserResolver {
+  return &userResolver{r}
+
+  
+}
+
+type mutationResolver struct{ *Resolver  }
+
+func (r *mutationResolver) CreateUser(ctx context.Context, name string) (*prisma.User, error) {
+  return r.Prisma.CreateUser(prisma.UserCreateInput{
+      Name: name,
+        
+      }).Exec(ctx)
+
+      
+}
+func (r *mutationResolver) CreateDraft(ctx context.Context, title string, userId string) (*prisma.Post, error) {
+  return r.Prisma.CreatePost(prisma.PostCreateInput{
+      Title: title,
+      Author: &prisma.UserCreateOneWithoutPostsInput{
+            Connect: &prisma.UserWhereUniqueInput{ID: &userId},
+                
+      },
+        
+      }).Exec(ctx)
+
+      
+}
+func (r *mutationResolver) Publish(ctx context.Context, postId string) (*prisma.Post, error) {
+  published := true
+               return r.Prisma.UpdatePost(prisma.PostUpdateParams{
+                  Where: prisma.PostWhereUniqueInput{ID: &postId},
+                      Data:  prisma.PostUpdateInput{Published: &published},
+                        
+                   }).Exec(ctx)
+
+                   
+}
+
+type postResolver struct{ *Resolver  }
+
+func (r *postResolver) Author(ctx context.Context, obj *prisma.Post) (*prisma.User, error) {
+  return r.Prisma.Post(prisma.PostWhereUniqueInput{ID: &obj.ID}).Author().Exec(ctx)
+
+  
+}
+
+type queryResolver struct{ *Resolver  }
+
+func (r *queryResolver) PublishedPosts(ctx context.Context) ([]*prisma.Post, error) {
+  published := true
+               posts, err := r.Prisma.Posts(&prisma.PostsParams{
+                  Where: &prisma.PostWhereInput{Published: &published},
+                    
+                   }).Exec(ctx)
+
+             if err != nil {
+                panic(err)
+                  
+             }
+
+              postsPointers := make([]*prisma.Post, 0)
+                               for _, p := range posts {
+                                  postsPointers = append(postsPointers, &p)
+                                    
+                               }
+
+                                return postsPointers, err
+
+                                
+}
+func (r *queryResolver) Post(ctx context.Context, postId string) (*prisma.Post, error) {
+  return r.Prisma.Post(prisma.PostWhereUniqueInput{ID: &postId}).Exec(ctx)
+
+  
+}
+func (r *queryResolver) PostsByUser(ctx context.Context, userId string) ([]prisma.Post, error) {
+  return r.Prisma.Posts(&prisma.PostsParams{
+Where: &prisma.PostWhereInput{
+Author: &prisma.UserWhereInput{
+        ID: &userId,
+              
+},
+    
+},
+  
+      }).Exec(ctx)
+
+      
+}
+
+type userResolver struct{ *Resolver  }
+
+func (r *userResolver) Posts(ctx context.Context, obj *prisma.User) ([]prisma.Post, error) {
+  return r.Prisma.User(prisma.UserWhereUniqueInput{ID: &obj.ID}).Posts(nil).Exec(ctx)
+}
+{% endhighlight %}
+
+
+Now in the "server" directory create a file named "server.go" and add the following:
+
+{% highlight python %}
+package main
+
+import (
+    "log"
+    "net/http"
+    "os"
+
+    "hello-world/generated/prisma-client"
+
+    "github.com/99designs/gqlgen/handler"
+)
+
+const defaultPort = "4000"
+
+func main() {
+    port := os.Getenv("PORT")
+    if len(port) == 0 {
+        port = defaultPort
+    }
+
+    client := prisma.New(nil)
+    resolver := Resolver{
+        Prisma: client,
+    }
+
+    http.Handle("/", handler.Playground("GraphQL Playground", "/query"))
+    http.Handle("/query", handler.GraphQL(NewExecutableSchema(Config{Resolvers: &resolver})))
+
+    log.Printf("Server is running on http://localhost:%s", port)
+    err := http.ListenAndServe(":"+port, nil)
+    if err != nil {
+        log.Fatal(err)
+    }
+}
+
+{% endhighlight %}
+
+Start the graphql server
+
+Update the package name at the top of generated.go from package server to "package main"
+
+In generated.go I had to fix a couple of misplaced pointer issues that gqlgen generated. - If you do this when you try to use "PublishedPosts" it will error out, you will need to convert the output of the code to a slice of pointers.  I will add the code below.
+NOTE: Besides changing the package name of the generated.go class to main from server, you should probably not alter this file.  You should convert the resolver methods to a slice of pointers.  I did this because Prisma provided the implementation and I assumed that was correct, and changed the generated code.  That is wrong; but at this point I was just trying to get this tutorial to run.
+
+PostsByUser(ctx context.Context, userID string) ([]*prisma.Post, error) -> remove the asterik(pointer) from the [] so it should look like []prisma.Post not []*prisma.Post
+PublishedPosts(ctx context.Context) ([]*prisma.Post, error) -> remove the asterik(pointer) from the [] so it should look like []prisma.Post not []*prisma.Post
+Posts(ctx context.Context, obj *prisma.User) ([]*prisma.Post, error) -> remove the asterik(pointer) from the [] so it should look like []prisma.Post not []*prisma.Post
+
+
+{% highlight python %}
+func (r *queryResolver) PublishedPosts(ctx context.Context) ([]*prisma.Post, error) {
+	published := true
+	posts, err := r.Prisma.Posts(&prisma.PostsParams{
+		Where: &prisma.PostWhereInput{Published: &published},
+	}).Exec(ctx)
+
+	if err != nil {
+		panic(err)
+	}
+
+  // convert what the client returns to a slice of pointers
+	postsPointers := make([]*prisma.Post, 0)
+	for _, p := range posts {
+		postsPointers = append(postsPointers, &p)
+	}
+
+	return postsPointers, err
+
+}
+{% endhighlight %}
+
+go to the root directory - hello-world-prisma and run the following - 
+{% highlight python %}
+go run ./server
+{% endhighlight %}
+
+you should see this
+
+{% highlight python %}
+019/10/30 22:36:41 Server is running on http://localhost:4000
+{% endhighlight %}
+
+To test these operations, navigate your browser to http://localhost:4000 where a GraphQL Playground is running.
+
+Some operations to use in the playground:
+
+Create a new user
+
+{% highlight python %}
+mutation {
+  createUser(name: "Bob") {
+    id
+  }
+}
+{% endhighlight %}
+
+Create a new draft
+
+{% highlight python %}
+//__USER_ID__ is the id number of the user
+mutation {
+  createDraft(title: "GraphQL is great", userId: "__USER_ID__") {
+    id
+    published
+    author {
+      id
+    }
+  }
+}
+{% endhighlight %}
+
+Publish a post
+
+{% highlight python %}
+//__POST_ID__ is the id number of the post
+mutation {
+  publish(id: "__POST_ID__") {
+    id
+    title
+    published
+  }
+  
+}
+{% endhighlight %}
+
+Fetch Published Posts
+
+{% highlight python %}
+query {
+  publishedPosts {
+      id
+      title
+      author {
+        id
+        name
+      }
+  }
+}
+{% endhighlight %}
+
+
+All code is located in https://github.com/calam1/prisma-golang-tutorial-blog
+
+[prisma-go-tutorial]: https://www.prisma.io/docs/get-started/01-setting-up-prisma-new-database-GO-g002/
+[docker-url]: https://www.docker.com/
+[gqlgen]: https://github.com/99designs/gqlgen
+[build_url]: https://golang.org/pkg/go/build/
