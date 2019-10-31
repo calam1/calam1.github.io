@@ -837,9 +837,10 @@ query {
 {% endhighlight %}
 
 
-All code is located in https://github.com/calam1/prisma-golang-tutorial-blog
+All code is located in [https://github.com/calam1/prisma-golang-tutorial-blog][github-prisma-url]
 
 [prisma-go-tutorial]: https://www.prisma.io/docs/get-started/01-setting-up-prisma-new-database-GO-g002/
 [docker-url]: https://www.docker.com/
 [gqlgen]: https://github.com/99designs/gqlgen
 [build_url]: https://golang.org/pkg/go/build/
+[github-prisma-url]: https://github.com/calam1/prisma-golang-tutorial-blog
